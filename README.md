@@ -320,7 +320,8 @@ Educational project for demonstration purposes.
 
 ## 👥 Contributors
 
-- Tanja Nyberg (@TanjaNY)
+- Tanja Nyberg (@TanjaNY) - Project Owner
+- Kiro AI - Development Assistant
 
 ## 🔗 Additional Resources
 

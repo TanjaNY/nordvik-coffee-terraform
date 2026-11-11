@@ -45,8 +45,8 @@ You should see output like:
 ```json
 {
     "UserId": "AIDAEXAMPLE",
-    "Account": "581137949655",
-    "Arn": "arn:aws:iam::581137949655:user/developer"
+    "Account": "123456789012",
+    "Arn": "arn:aws:iam::123456789012:user/developer"
 }
 ```
 
@@ -164,7 +164,7 @@ aws dynamodb describe-table --table-name nordvik-coffee-reviews \
 ```bash
 # View current budget status
 aws budgets describe-budget \
-  --account-id 581137949655 \
+  --account-id YOUR_ACCOUNT_ID \
   --budget-name nordvik-coffee-monthly-budget
 
 # View current month's costs

@@ -333,5 +333,4 @@ Educational project for demonstration purposes.
 ---
 
 **Last Updated**: November 2026  
-**AWS Account**: 581137949655  
 **Region**: eu-central-1 (Frankfurt)

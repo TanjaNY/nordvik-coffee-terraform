@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write        # OIDC-Token für AWS
-  contents: read         # Code auschecken
-  pull-requests: write   # Plan als PR-Kommentar posten
+  id-token: write        # OIDC token for AWS
+  contents: read         # Checkout code
+  pull-requests: write   # Post plan as PR comment
 
 env:
   AWS_REGION: eu-central-1
@@ -18,7 +18,7 @@ env:
   TF_VERSION: 1.5.0
   TF_IN_AUTOMATION: "true"
 
-# Verhindert, dass zwei Läufe auf demselben Branch gleichzeitig den State ändern
+# Prevents two runs on the same branch from modifying state simultaneously
 concurrency:
   group: terraform-${{ github.ref }}
   cancel-in-progress: false
@@ -31,16 +31,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # TEMPORÄR: zeigt sub und aud des OIDC-Tokens. Entfernen, sobald OIDC läuft.
-      - name: OIDC-Claims anzeigen (Debug)
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const t = await core.getIDToken('sts.amazonaws.com');
-            const c = JSON.parse(Buffer.from(t.split('.')[1], 'base64').toString());
-            core.info(`sub=${c.sub}`);
-            core.info(`aud=${c.aud}`);
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -70,7 +60,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: terraform plan -input=false -no-color -out=tfplan
-        continue-on-error: true   # Kommentar soll auch bei Fehler gepostet werden
+        continue-on-error: true
 
       - name: Comment PR with Plan
         if: github.event_name == 'pull_request'
@@ -81,7 +71,7 @@ jobs:
           script: |
             const max = 60000;
             let plan = process.env.PLAN || '';
-            if (plan.length > max) plan = plan.slice(0, max) + '\n\n... (gekürzt)';
+            if (plan.length > max) plan = plan.slice(0, max) + '\n\n... (truncated)';
             const body = [
               `#### Terraform Format and Style 🖌 \`${{ steps.fmt.outcome }}\``,
               `#### Terraform Initialization ⚙️ \`${{ steps.init.outcome }}\``,
@@ -109,43 +99,47 @@ jobs:
         if: steps.plan.outcome == 'failure'
         run: exit 1
 
-      - name: Upload plan
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan
-          path: tfplan
-          retention-days: 1
+      - name: Plan Summary
+        if: always()
+        run: |
+          echo "✅ Terraform Plan Complete"
+          echo ""
+          echo "📋 This workflow runs 'terraform plan' only."
+          echo "🔒 No automatic deployment to keep infrastructure safe."
+          echo "📚 For learning: See how CI/CD validates infrastructure changes."
+          echo ""
+          echo "To deploy manually:"
+          echo "  1. Run 'aws login' locally"
+          echo "  2. Run 'terraform apply' from your machine"
 
-  apply:
-    name: Terraform Apply
-    needs: plan
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-          role-session-name: gha-apply-${{ github.run_id }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform Init
-        run: terraform init -input=false
-
-      - name: Download plan
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan
-
-      - name: Terraform Apply
-        run: terraform apply -input=false -auto-approve tfplan
+  # Apply job is disabled for educational/safety purposes
+  # Uncomment and configure for production use
+  #
+  # apply:
+  #   name: Terraform Apply
+  #   needs: plan
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  #   runs-on: ubuntu-latest
+  #   environment: production  # Add manual approval gate
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         role-to-assume: ${{ env.AWS_ROLE_ARN }}
+  #         aws-region: ${{ env.AWS_REGION }}
+  #         role-session-name: gha-apply-${{ github.run_id }}
+  #
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: ${{ env.TF_VERSION }}
+  #
+  #     - name: Terraform Init
+  #       run: terraform init -input=false
+  #
+  #     - name: Terraform Apply
+  #       run: terraform apply -input=false -auto-approve
